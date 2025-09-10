@@ -1,0 +1,126 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Mini-DSSP (Karim Bouchaara \'97 M2 Bioinformatics, Universit\'e9 Paris Cit\'e9)\
+\
+A compact, transparent re-implementation of DSSP core rules for protein secondary-structure assignment. It follows Kabsch & Sander (1983): electrostatic CO\'b7\'b7\'b7NH hydrogen-bond energy plus motif rules (n-turns for helices; beta-bridges chained into ladders for sheets), with a DSSP-like priority to merge states.\
+\
+States produced: G/H/I, E/B, T (others default to C).\
+Evaluation reported in H/E/C (mapping G,I->H and B->E) as Q3.\
+\
+Repository layout\
+\
+mini-dssp-bouchaara/\
+dssp_bouchaara.py # mini-DSSP implementation\
+data/ input PDBs\
+1CRN.pdb\
+1BTA.pdb\
+1UBQ.pdb\
+pixi.toml # environment (mkdssp via: pixi run -- mkdssp)\
+pixi.lock\
+BOUCHAARA_rapport.pdf #report \
+\
+Environment\
+\
+Python >= 3.10, NumPy, Biopython.\
+mkdssp available via pixi.\
+\
+Install:\
+pixi install\
+\
+Usage\
+\
+3.1 Run mini-DSSP on a PDB\
+\
+Example: chain A of 1CRN\
+python dssp_bouchaara.py data/1CRN.pdb --chain A > /tmp/1CRN.out\
+Extract the per-residue summary line into preds/:\
+grep -A2 "Summary (per residue)" /tmp/1CRN.out | tail -n1 > preds/1CRN.pred.ss\
+\
+Parameters:\
+--chain A (default A)\
+--cutoff -0.45 (kcal/mol; try -0.40 or -0.55 for sensitivity)\
+-v (verbose counts)\
+--print-bridges\
+--print-hb\
+\
+3.2 Build DSSP references with mkdssp\
+\
+Compute DSSP (DSSP format autodetected from the output extension):\
+pixi run -- mkdssp data/1CRN.pdb refs/1CRN.dssp\
+\
+Extract the summary SS string (spaces -> C):\
+python - <<'PY' > refs/1CRN.ref.ss\
+ss=[]; go=False\
+for line in open("refs/1CRN.dssp"):\
+if line.startswith(" # RESIDUE"): go=True; continue\
+if not go or not line.strip(): continue\
+c = line[16] if len(line)>16 else ' '\
+ss.append(c if c!=' ' else 'C')\
+print("".join(ss))\
+PY\
+\
+Method (what the script does)\
+\
+Parse PDB (Bio.PDB). Keep backbone N, CA, C, O and ignore HETATM and waters; require all four atoms.\
+\
+Place virtual H on N if missing: bisector of N\'96C and N\'96CA (or prev C and N\'96CA when peptide link is intact), with |N\'96H| approx 1.0 \'c5.\
+\
+Compute DSSP-style H-bond energy:\
+E = 332 * q1 * q2 * (1/r_ON + 1/r_CH - 1/r_OH - 1/r_CN), with q1=0.42, q2=0.20.\
+Accept CO(i)->NH(j) if E < cutoff (default -0.45 kcal/mol).\
+\
+Detect n-turns (i->i+3/4/5). Two consecutive n-turns seed G/H/I; extend by overlap.\
+\
+Detect beta-bridges (parallel/antiparallel patterns), chain them into ladders.\
+Residues in ladders with >=2 bridges -> E; single bridge -> B.\
+\
+Add non-helical T at turn endpoints still in coil; merge conflicts by priority:\
+H > B > E > G > I > T > C to produce one letter per residue.\
+\
+Evaluation protocol (H/E/C and Q3)\
+\
+Map fine states to three classes: G,I->H ; B->E ; others unchanged (H,E; else C).\
+Q3 = fraction of residues where Pred == Ref in H/E/C.\
+Confusion matrices (rows = Ref, cols = Pred) are provided in results/.\
+\
+Key results\
+\
+Per-protein composition and accuracy (H/E/C, Q3):\
+PDB,L,%H,%E,%C,Q3\
+1CRN,46,43.5,8.7,47.8,91.3\
+1BTA,89,41.6,18.0,40.4,96.6\
+1UBQ,76,15.8,31.6,52.6,100.0\
+Mean,-,-,-,-,96.0\
+\
+Confusion (H/E/C): see results/confusion_*.csv.\
+Errors concentrate at helix boundaries (C<->H), sheets are recovered robustly.\
+\
+Cutoff sensitivity (1BTA):\
+-0.40 -> H 42.7% E 18.0% C 39.3%\
+-0.45 -> H 41.6% E 18.0% C 40.4%\
+-0.55 -> H 41.6% E 18.0% C 40.4%\
+Beta content is essentially unchanged; small H<->C shifts appear only at helix termini.\
+\
+Reproducibility\
+\
+Environment pinned via pixi.toml.\
+Commands above reproduce refs/ (mkdssp) and preds/ (mini-DSSP).\
+Q3 and confusion are computed after the H/E/C mapping described in section 5.\
+\
+Citation\
+\
+Kabsch W., Sander C. Dictionary of protein secondary structure: pattern recognition of hydrogen-bonded and geometrical features. Biopolymers 22 (1983) 2577\'962637.\
+mkdssp reference implementation: see DSSP documentation; version noted in the .dssp file headers.\
+\
+License / contact\
+\
+Educational/research use.\
+Contact: Karim Bouchaara \'97 M2 Bioinformatique, Universit\'e9 Paris Cit\'e9.\
+Github : https://github.com/karimbchr\
+\
+Submission tip: Make the GitHub repository Public, then download the ZIP from GitHub (release or main) for Moodle. Include rapport.pdf and the GitHub link.}

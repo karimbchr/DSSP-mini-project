@@ -1,0 +1,13 @@
+[workspace]
+channels = ["conda-forge"]
+name = "Gestion de projet informatique"
+platforms = ["osx-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = "3.11.*"
+numpy = ">=2.3.2,<3"
+biopython = ">=1.85,<2"
+dssp = ">=4.5.6,<5"
